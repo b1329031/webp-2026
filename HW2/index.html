@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>資工選課表</title>
+  <style>
+    body { font-family: Arial, Helvetica, sans-serif; padding: 20px; }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+    }
+    td, th {
+      border: 1px solid #ddd;
+      padding: 6px;
+    }
+    tr:nth-child(even) { background-color: #f2f2f2; }
+    tr:hover { background-color: #ddd; }
+    th {
+      padding-top: 12px;
+      padding-bottom: 12px;
+      text-align: left;
+      background-color: #04AA6D;
+      color: white;
+    }
+
+    .course-link {
+      cursor: pointer;
+      color: #0645ad;
+      text-decoration: underline;
+    }
+    .course-link:hover { color: #0b0080; }
+
+    /* Overlay */
+    #overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.4);
+      z-index: 100;
+    }
+
+    /* Popover panel */
+    #popover {
+      position: fixed;
+      top: 50%;
+      right: 40px;
+      transform: translateY(-50%);
+      background: #fff;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      width: 420px;
+      z-index: 101;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+      overflow: hidden;
+    }
+
+    .pop-header {
+      background: #f5f5f5;
+      border-bottom: 1px solid #ddd;
+      padding: 10px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .pop-header h3 {
+      margin: 0;
+      font-size: 15px;
+      color: #333;
+    }
+    .pop-close {
+      cursor: pointer;
+      font-size: 20px;
+      color: #888;
+      border: none;
+      background: none;
+      padding: 0 4px;
+    }
+    .pop-close:hover { color: #333; }
+
+    /* Tabs */
+    .pop-tabs {
+      display: flex;
+      border-bottom: 2px solid #e0e0e0;
+      padding: 0 12px;
+      background: #fff;
+    }
+    .pop-tab {
+      padding: 8px 14px;
+      font-size: 13px;
+      cursor: pointer;
+      border: 1px solid transparent;
+      border-bottom: none;
+      margin-bottom: -2px;
+      color: #555;
+    }
+    .pop-tab.active {
+      border-color: #ccc;
+      border-bottom-color: #fff;
+      background: #fff;
+      color: #c8860a;
+      font-weight: bold;
+      border-radius: 4px 4px 0 0;
+    }
+
+    /* Info table */
+    .pop-body { padding: 12px 16px; }
+    .pop-info { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .pop-info tr { border-bottom: 1px solid #f0f0f0; }
+    .pop-info td { padding: 6px 4px; vertical-align: top; }
+    .pop-info td:first-child {
+      color: #666;
+      width: 110px;
+      white-space: nowrap;
+    }
+
+    /* Schedule inner table */
+    .schedule-table { border-collapse: collapse; font-size: 12px; margin-top: 4px; }
+    .schedule-table th {
+      background: none;
+      color: #333;
+      padding: 2px 8px;
+      text-align: left;
+      border: none;
+      font-weight: bold;
+      font-size: 12px;
+      padding-top: 0;
+      padding-bottom: 0;
+    }
+    .schedule-table td {
+      padding: 2px 8px;
+      border: none;
+      color: #333;
+    }
+
+    .link-text { color: #c8860a; text-decoration: underline; cursor: pointer; }
+  </style>
+</head>
+<body>
+
+  <h2>資工選課表</h2>
+  <table id="csie">
+    <tr>
+      <th>開課單位</th>
+      <th>課程名稱</th>
+      <th>授課教師</th>
+    </tr>
+    <tr>
+      <td>資工系</td>
+      <td class="course-link" data-idx="0">物件導向軟體設計</td>
+      <td>黃崇源</td>
+    </tr>
+    <tr>
+      <td>資工系</td>
+      <td class="course-link" data-idx="1">計算機網路實驗</td>
+      <td>李春良</td>
+    </tr>
+    <tr>
+      <td>資工系</td>
+      <td class="course-link" data-idx="2">作業系統實務</td>
+      <td>張哲維</td>
+    </tr>
+    <tr>
+      <td>資工系</td>
+      <td class="course-link" data-idx="3">生物統計</td>
+      <td>陳光武</td>
+    </tr>
+    <tr>
+      <td>資工系</td>
+      <td class="course-link" data-idx="4">通訊系統</td>
+      <td>陳仁暉</td>
+    </tr>
+    <tr>
+      <td>資工系</td>
+      <td class="course-link" data-idx="5">軟硬體專題(2)</td>
+      <td>魏志達</td>
+    </tr>
+  </table>
+  <button onclick="changeResult()">Change</button>
+
+  <!-- Popover -->
+  <div id="overlay">
+    <div id="popover">
+      <div class="pop-header">
+        <h3>課程詳細資料 &#128438;</h3>
+        <button class="pop-close" id="closeBtn">&#x2715;</button>
+      </div>
+      <div class="pop-tabs">
+        <div class="pop-tab active">課程資訊</div>
+        <div class="pop-tab">教學大綱</div>
+        <div class="pop-tab">教學進度</div>
+        <div class="pop-tab">先修課程</div>
+      </div>
+      <div class="pop-body">
+        <table class="pop-info">
+          <tbody id="pop-rows"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    var courses = [
+      {
+        semester: "114/2",
+        teacher: "黃崇源",
+        dept: "資工系",
+        grade: "3-甲",
+        code: "IT3004(3)",
+        name: "物件導向軟體設計",
+        sectionId: "A2337",
+        mainSection: "",
+        students: "本校: 64人；外校: 0人",
+        limit: "10~60",
+        day: "星期五", start: "2 (09:10)", end: "4 (12:00)", room: "資工系電腦教室2", freq: "每週上課"
+      },
+      {
+        semester: "114/2",
+        teacher: "李春良",
+        dept: "資工系",
+        grade: "3-甲",
+        code: "IT3006(1)",
+        name: "計算機網路實驗",
+        sectionId: "A2341",
+        mainSection: "",
+        students: "本校: 48人；外校: 0人",
+        limit: "10~50",
+        day: "星期三", start: "7 (14:10)", end: "9 (17:00)", room: "資工系電腦教室1", freq: "每週上課"
+      },
+      {
+        semester: "114/2",
+        teacher: "張哲維",
+        dept: "資工系",
+        grade: "3-甲",
+        code: "IT3005(1)",
+        name: "作業系統實務",
+        sectionId: "A2342",
+        mainSection: "",
+        students: "本校: 52人；外校: 0人",
+        limit: "10~55",
+        day: "星期二", start: "7 (14:10)", end: "9 (17:00)", room: "資工系電腦教室3", freq: "每週上課"
+      },
+      {
+        semester: "114/2",
+        teacher: "陳光武",
+        dept: "資工系",
+        grade: "2-甲",
+        code: "IT2008(3)",
+        name: "生物統計",
+        sectionId: "A2350",
+        mainSection: "",
+        students: "本校: 38人；外校: 0人",
+        limit: "10~60",
+        day: "星期一", start: "3 (10:10)", end: "5 (12:00)", room: "資工系教室101", freq: "每週上課"
+      },
+      {
+        semester: "114/2",
+        teacher: "陳仁暉",
+        dept: "資工系",
+        grade: "3-乙",
+        code: "IT3009(3)",
+        name: "通訊系統",
+        sectionId: "A2355",
+        mainSection: "",
+        students: "本校: 44人；外校: 0人",
+        limit: "10~60",
+        day: "星期四", start: "2 (09:10)", end: "4 (12:00)", room: "資工系教室202", freq: "每週上課"
+      },
+      {
+        semester: "114/2",
+        teacher: "魏志達",
+        dept: "資工系",
+        grade: "4-甲",
+        code: "IT4002(2)",
+        name: "軟硬體專題(2)",
+        sectionId: "A2360",
+        mainSection: "A2359",
+        students: "本校: 30人；外校: 0人",
+        limit: "5~35",
+        day: "星期五", start: "5 (13:10)", end: "6 (15:00)", room: "資工系實驗室301", freq: "每週上課"
+      }
+    ];
+
+    var scheduleHtml =
+      '<table class="schedule-table">' +
+        '<tr><th>星期</th><th>開始 / 結束</th><th>教室 <span class="link-text">[代碼說明]</span></th><th></th></tr>' +
+        '<tr><td id="p-day"></td><td id="p-time"></td><td id="p-room"></td><td id="p-freq"></td></tr>' +
+      '</table>';
+
+    function showPopover(idx) {
+      var c = courses[idx];
+      var rows = [
+        ["學年/學期",    c.semester],
+        ["授課教師",     c.teacher],
+        ["開課單位",     c.dept],
+        ["年級-班別",    c.grade],
+        ["科目代號(學分)", c.code],
+        ["課程名稱",     c.name],
+        ["開課序號",     c.sectionId],
+        ["主要開課序號", c.mainSection],
+        ["修課學生",     c.students],
+        ["人數限制",     c.limit],
+        ["上課時間地點", scheduleHtml],
+        ["核心能力",     '<span class="link-text">按此查詢</span>'],
+        ["備註",        ""]
+      ];
+
+      var html = "";
+      for (var i = 0; i < rows.length; i++) {
+        html += "<tr><td>" + rows[i][0] + "</td><td>" + rows[i][1] + "</td></tr>";
+      }
+      document.getElementById("pop-rows").innerHTML = html;
+
+      // fill schedule cells after inserting into DOM
+      document.getElementById("p-day").textContent  = c.day;
+      document.getElementById("p-time").textContent = c.start + " ～ " + c.end;
+      document.getElementById("p-room").textContent = c.room;
+      document.getElementById("p-freq").textContent = c.freq;
+
+      document.getElementById("overlay").style.display = "block";
+    }
+
+    function closePopover() {
+      document.getElementById("overlay").style.display = "none";
+    }
+
+    function changeResult() {
+      var myTable = document.getElementById("csie");
+      myTable.rows[1].cells[2].innerHTML = "李春良";
+    }
+
+    // Attach click to course-link cells
+    var links = document.querySelectorAll(".course-link");
+    for (var i = 0; i < links.length; i++) {
+      links[i].addEventListener("click", function() {
+        showPopover(parseInt(this.getAttribute("data-idx")));
+      });
+    }
+
+    // Close when clicking overlay background
+    document.getElementById("overlay").addEventListener("click", function(e) {
+      if (e.target === this) closePopover();
+    });
+
+    document.getElementById("closeBtn").addEventListener("click", closePopover);
+  </script>
+</body>
+</html>
